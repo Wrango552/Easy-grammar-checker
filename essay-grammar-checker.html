@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Essay Grammar Checker</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=boska@500,700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+      --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem;
+      --space-12: 3rem; --space-16: 4rem;
+      --color-bg: #f7f6f2; --color-surface: #f9f8f5; --color-surface-2: #fbfbf9;
+      --color-surface-offset: #edeae5; --color-border: #d4d1ca; --color-divider: #dcd9d5;
+      --color-text: #28251d; --color-text-muted: #6e6c67; --color-text-faint: #9f9d98;
+      --color-text-inverse: #f9f8f4; --color-primary: #01696f; --color-primary-hover: #0c4e54;
+      --color-primary-highlight: #dcebea; --color-warning: #964219; --color-warning-highlight: #efe1d8;
+      --color-success: #437a22; --color-success-highlight: #deead7;
+      --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
+      --shadow-sm: 0 1px 2px rgba(40,37,29,.06); --shadow-md: 0 10px 30px rgba(40,37,29,.08);
+      --font-body: 'Satoshi', Inter, sans-serif; --font-display: 'Boska', Georgia, serif;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614; --color-surface: #1c1b19; --color-surface-2: #201f1d; --color-surface-offset: #2a2927;
+      --color-border: #393836; --color-divider: #2a2927; --color-text: #e2e0dc; --color-text-muted: #b5b2ab;
+      --color-text-faint: #8a8882; --color-text-inverse: #171614; --color-primary: #58a7b2; --color-primary-hover: #7fbec6;
+      --color-primary-highlight: #213539; --color-warning: #c78663; --color-warning-highlight: #3c2b24;
+      --color-success: #82b76a; --color-success-highlight: #23311f; --shadow-sm: 0 1px 2px rgba(0,0,0,.2); --shadow-md: 0 10px 30px rgba(0,0,0,.35);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+    body {
+      min-height: 100dvh; font-family: var(--font-body); font-size: var(--text-base); line-height: 1.6;
+      color: var(--color-text); background:
+        radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 28%),
+        var(--color-bg);
+    }
+    button, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .shell { max-width: 1180px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-12); }
+    .skip-link { position: absolute; left: -9999px; top: var(--space-3); }
+    .skip-link:focus { left: var(--space-3); z-index: 99; background: var(--color-surface); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); margin-bottom: var(--space-8);
+      padding: var(--space-3) var(--space-4); border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+      background: color-mix(in srgb, var(--color-surface) 86%, transparent); backdrop-filter: blur(12px); border-radius: var(--radius-xl);
+      position: sticky; top: var(--space-3); z-index: 10;
+    }
+    .brand { display: flex; align-items: center; gap: var(--space-3); }
+    .logo { width: 34px; height: 34px; color: var(--color-primary); }
+    .brand strong { display: block; font-size: var(--text-sm); }
+    .brand span { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .icon-btn, .primary-btn, .secondary-btn, .ghost-btn {
+      border-radius: var(--radius-full); min-height: 44px; padding: 0 var(--space-4); border: 1px solid transparent;
+      transition: .18s ease;
+    }
+    .icon-btn { width: 44px; padding: 0; display: inline-grid; place-items: center; background: var(--color-surface-2); border-color: color-mix(in srgb, var(--color-text) 10%, transparent); }
+    .primary-btn { background: var(--color-primary); color: var(--color-text-inverse); }
+    .primary-btn:hover { background: var(--color-primary-hover); }
+    .secondary-btn { background: var(--color-surface-2); border-color: color-mix(in srgb, var(--color-text) 12%, transparent); }
+    .ghost-btn { background: transparent; border-color: color-mix(in srgb, var(--color-text) 12%, transparent); }
+    .layout { display: grid; grid-template-columns: 1.3fr .9fr; gap: var(--space-6); }
+    .panel {
+      background: color-mix(in srgb, var(--color-surface) 94%, transparent); border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+      border-radius: var(--radius-xl); box-shadow: var(--shadow-sm);
+    }
+    .hero { padding: var(--space-6); margin-bottom: var(--space-6); }
+    .eyebrow { display: inline-flex; gap: var(--space-2); align-items: center; font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .12em; margin-bottom: var(--space-3); }
+    h1 { font-family: var(--font-display); font-size: var(--text-xl); line-height: 1.05; max-width: 12ch; margin-bottom: var(--space-3); }
+    .hero p { max-width: 58ch; color: var(--color-text-muted); }
+    .tool { padding: var(--space-5); }
+    .tool-header { display: flex; justify-content: space-between; gap: var(--space-4); align-items: flex-start; margin-bottom: var(--space-4); }
+    .tool h2, .results h2 { font-size: var(--text-lg); line-height: 1.2; }
+    .tool p, .results p { color: var(--color-text-muted); font-size: var(--text-sm); }
+    textarea {
+      width: 100%; min-height: 360px; resize: vertical; padding: var(--space-4); border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border); background: var(--color-surface-2); line-height: 1.7;
+    }
+    textarea:focus, button:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .controls { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
+    .metrics { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
+    .metric {
+      min-width: 130px; padding: var(--space-3); background: var(--color-surface-2); border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+      border-radius: var(--radius-lg);
+    }
+    .metric span { display: block; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); }
+    .metric strong { display: block; font-size: var(--text-lg); }
+    .results { padding: var(--space-5); }
+    .status { margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); font-size: var(--text-sm); }
+    .status.good { background: var(--color-success-highlight); color: var(--color-success); }
+    .status.warn { background: var(--color-warning-highlight); color: var(--color-warning); }
+    .result-list { display: grid; gap: var(--space-3); }
+    .result-card {
+      padding: var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface-2);
+      border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    }
+    .result-card h3 { font-size: var(--text-base); margin-bottom: var(--space-2); }
+    .result-card p { font-size: var(--text-sm); }
+    .tag-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-2); }
+    .tag {
+      display: inline-flex; align-items: center; border-radius: var(--radius-full); padding: .32rem .7rem; font-size: var(--text-xs);
+      background: var(--color-primary-highlight); color: var(--color-primary);
+    }
+    .excerpt { margin: var(--space-3) 0; padding-left: var(--space-3); border-left: 2px solid color-mix(in srgb, var(--color-primary) 40%, transparent); color: var(--color-text); }
+    .side-notes { display: grid; gap: var(--space-6); }
+    .checklist, .about { padding: var(--space-5); }
+    .checklist ul { list-style: none; display: grid; gap: var(--space-3); margin-top: var(--space-4); }
+    .checklist li { display: flex; gap: var(--space-3); align-items: flex-start; color: var(--color-text-muted); }
+    .dot { width: 10px; height: 10px; margin-top: .45rem; border-radius: 999px; background: var(--color-primary); flex: none; }
+    .about code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; background: var(--color-surface-offset); padding: .1rem .35rem; border-radius: .35rem; }
+    .footer-note { margin-top: var(--space-6); color: var(--color-text-faint); font-size: var(--text-xs); }
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; }
+      h1 { max-width: 16ch; }
+      textarea { min-height: 280px; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+  <div class="shell">
+    <header class="topbar" aria-label="Toolbar">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 48 48" fill="none" aria-label="Essay Grammar Checker logo">
+          <rect x="6" y="7" width="24" height="30" rx="7" stroke="currentColor" stroke-width="3"></rect>
+          <path d="M17 17h16M17 24h16M17 31h10" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+          <path d="M31 33l4 4 7-10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        <div>
+          <strong>Essay Grammar Checker</strong>
+          <span>Basic proofreading, not a rewrite machine.</span>
+        </div>
+      </div>
+      <button class="icon-btn" id="themeToggle" aria-label="Switch theme" title="Switch theme">
+        <span aria-hidden="true">◐</span>
+      </button>
+    </header>
+
+    <main id="main">
+      <section class="hero panel">
+        <div class="eyebrow">Minimal edits • Essay-safe</div>
+        <h1>Catch the obvious stuff without changing your voice.</h1>
+        <p>This checker is designed to stay light-touch. It looks for basic grammar, punctuation, spacing, capitalization, and a few common essay mistakes, then gives you simple suggestions or conservative quick fixes.</p>
+      </section>
+
+      <section class="layout" aria-label="Grammar checker workspace">
+        <div>
+          <div class="tool panel">
+            <div class="tool-header">
+              <div>
+                <h2>Paste your draft</h2>
+                <p>Use “Apply simple fixes” only for safe edits like spacing, capitalization at sentence starts, repeated words, and common apostrophes.</p>
+              </div>
+            </div>
+            <label class="sr-only" for="essayInput">Essay text</label>
+            <textarea id="essayInput" placeholder="Paste your essay here...">In my opinion technology have changed education in many ways. For example, students can research faster, however it also create distractions. This is one of the reasons why schools should teach better digital habits  , not just ban devices. another issue is that some students dont always know which sources are credible. These problems can be improved, but it takes planning.</textarea>
+            <div class="controls">
+              <button class="primary-btn" id="checkBtn">Check basics</button>
+              <button class="secondary-btn" id="applyBtn">Apply simple fixes</button>
+              <button class="secondary-btn" id="sampleBtn">Load sample</button>
+              <button class="ghost-btn" id="clearBtn">Clear</button>
+            </div>
+            <div class="metrics" aria-label="Writing stats">
+              <div class="metric"><span>Words</span><strong id="wordCount">0</strong></div>
+              <div class="metric"><span>Sentences</span><strong id="sentenceCount">0</strong></div>
+              <div class="metric"><span>Flags</span><strong id="issueCount">0</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="side-notes">
+          <section class="results panel">
+            <h2>Suggestions</h2>
+            <p>The fix button only changes low-risk issues. Subject-verb warnings still stay manual so the tool does not over-edit your essay.</p>
+            <div id="statusBox" class="status warn">Run a check to see suggestions.</div>
+            <div id="resultsList" class="result-list" aria-live="polite"></div>
+          </section>
+
+          <section class="checklist panel">
+            <h2>Auto-fix rules</h2>
+            <ul>
+              <li><span class="dot" aria-hidden="true"></span><span>Remove duplicate spaces and spaces before punctuation.</span></li>
+              <li><span class="dot" aria-hidden="true"></span><span>Fix repeated words like <code>the the</code>.</span></li>
+              <li><span class="dot" aria-hidden="true"></span><span>Capitalize the first word of a sentence.</span></li>
+              <li><span class="dot" aria-hidden="true"></span><span>Repair common contractions such as <code>dont</code>, <code>cant</code>, and <code>theyre</code>.</span></li>
+              <li><span class="dot" aria-hidden="true"></span><span>Keep grammar judgment calls as suggestions only.</span></li>
+            </ul>
+          </section>
+
+          <section class="about panel">
+            <h2>Why it stays basic</h2>
+            <p>A lot of grammar tools try to sound smarter by rewriting whole sentences. This one avoids that so your draft still sounds like you.</p>
+            <p class="footer-note">Tip: click the fix button first, then review the remaining warnings one by one.</p>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const essayInput = document.getElementById('essayInput');
+    const checkBtn = document.getElementById('checkBtn');
+    const applyBtn = document.getElementById('applyBtn');
+    const sampleBtn = document.getElementById('sampleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const resultsList = document.getElementById('resultsList');
+    const statusBox = document.getElementById('statusBox');
+    const wordCount = document.getElementById('wordCount');
+    const sentenceCount = document.getElementById('sentenceCount');
+    const issueCount = document.getElementById('issueCount');
+    const themeToggle = document.getElementById('themeToggle');
+
+    const sampleEssay = `Social media has changed how people communicate, and it has made some things easier. But it also have created new problems for students. For example, many people spend too much time online , and they sometimes forget to focus on school work. another problem is that false information spread quickly. These issues are serious, but they can be reduced if schools teach students how to think carefully and check sources.`;
+
+    const contractionFixes = {
+      dont: "don't", cant: "can't", wont: "won't", didnt: "didn't", doesnt: "doesn't",
+      isnt: "isn't", arent: "aren't", wasnt: "wasn't", werent: "weren't", couldnt: "couldn't",
+      shouldnt: "shouldn't", wouldnt: "wouldn't", ive: "I've", im: "I'm",
+      ill: "I'll", thats: "that's", theres: "there's", youre: "you're", theyre: "they're", weve: "we've"
+    };
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    function stats(text) {
+      const words = (text.trim().match(/\b[\w'’-]+\b/g) || []).length;
+      const sentences = (text.trim().match(/[^.!?]+[.!?]?/g) || []).filter(s => s.trim().length > 0).length;
+      wordCount.textContent = words;
+      sentenceCount.textContent = sentences;
+    }
+
+    function addIssue(issues, type, title, excerpt, suggestion) {
+      issues.push({ type, title, excerpt, suggestion });
+    }
+
+    function runChecks(text) {
+      const issues = [];
+      if (!text.trim()) return issues;
+
+      const repeated = /\b(\w+)\s+\1\b/gi;
+      for (const match of text.matchAll(repeated)) {
+        addIssue(issues, 'Repeat', 'Repeated word', match[0], `Delete one “${match[1]}”.`);
+      }
+
+      const doubleSpace = / {2,}/g;
+      for (const match of text.matchAll(doubleSpace)) {
+        addIssue(issues, 'Spacing', 'Extra spaces', 'Multiple spaces found.', 'Use a single space between words and after punctuation.');
+      }
+
+      const spaceBeforePunct = /\s+[,.!?;:]/g;
+      for (const match of text.matchAll(spaceBeforePunct)) {
+        addIssue(issues, 'Punctuation', 'Space before punctuation', match[0], 'Remove the space before the punctuation mark.');
+      }
+
+      const sentenceStarts = text.match(/(^|[.!?]\s+)([a-z])/g) || [];
+      sentenceStarts.forEach(fragment => {
+        const letter = fragment.trim().slice(-1);
+        addIssue(issues, 'Capitalization', 'Possible lowercase sentence start', fragment.trim(), `Consider capitalizing “${letter}”.`);
+      });
+
+      Object.entries(contractionFixes).forEach(([wrong, right]) => {
+        const rgx = new RegExp(`\\b${wrong}\\b`, 'gi');
+        for (const match of text.matchAll(rgx)) {
+          addIssue(issues, 'Contraction', 'Common missing apostrophe', match[0], `Try “${right}”.`);
+        }
+      });
+
+      const svPatterns = [
+        { rgx: /\b(it|this|that|he|she)\s+have\b/gi, fix: 'Use “has” instead of “have”.' },
+        { rgx: /\b(it|this|that|he|she)\s+do\b/gi, fix: 'Use “does” instead of “do”.' },
+        { rgx: /\b(technology|education|information|social media)\s+have\b/gi, fix: 'This subject is usually singular here, so “has” may fit better.' },
+        { rgx: /\b(problem|issue|reason|student|source)\s+are\b/gi, fix: 'A singular noun often needs “is” instead of “are”.' },
+        { rgx: /\b(problem|issue|reason|student|source)\s+were\b/gi, fix: 'A singular noun often needs “was” instead of “were”.' },
+        { rgx: /\b(problems|issues|reasons|students|sources)\s+is\b/gi, fix: 'A plural noun often needs “are” instead of “is”.' },
+        { rgx: /\b(problems|issues|reasons|students|sources)\s+was\b/gi, fix: 'A plural noun often needs “were” instead of “was”.' },
+        { rgx: /\b(it|this|that)\s+create\b/gi, fix: 'A singular subject may need “creates”.' },
+        { rgx: /\b(it|this|that)\s+need\b/gi, fix: 'A singular subject may need “needs”.' },
+        { rgx: /\b(it|this|that)\s+improve\b/gi, fix: 'A singular subject may need “improves”.' },
+        { rgx: /\b(false information)\s+spread\b/gi, fix: 'This may need “spreads” depending on your meaning.' }
+      ];
+
+      svPatterns.forEach(({ rgx, fix }) => {
+        for (const match of text.matchAll(rgx)) {
+          addIssue(issues, 'Grammar', 'Possible subject-verb mismatch', match[0], fix);
+        }
+      });
+
+      const fragments = text.split(/(?<=[.!?])\s+/).filter(Boolean);
+      fragments.forEach(sentence => {
+        const trimmed = sentence.trim();
+        if (trimmed.length > 18 && !/[.!?]$/.test(trimmed)) {
+          addIssue(issues, 'Punctuation', 'Sentence may be missing end punctuation', trimmed.slice(0, 90), 'Consider adding a period, question mark, or exclamation point.');
+        }
+      });
+
+      return issues.slice(0, 18);
+    }
+
+    function preserveCase(original, replacement) {
+      if (original === original.toUpperCase()) return replacement.toUpperCase();
+      if (original[0] === original[0].toUpperCase()) return replacement[0].toUpperCase() + replacement.slice(1);
+      return replacement;
+    }
+
+    function applySimpleFixes(text) {
+      let updated = text;
+
+      updated = updated.replace(/\b(\w+)\s+\1\b/gi, '$1');
+      updated = updated.replace(/\s+([,.!?;:])/g, '$1');
+      updated = updated.replace(/ {2,}/g, ' ');
+
+      Object.entries(contractionFixes).forEach(([wrong, right]) => {
+        const rgx = new RegExp(`\\b${wrong}\\b`, 'gi');
+        updated = updated.replace(rgx, match => preserveCase(match, right));
+      });
+
+      updated = updated.replace(/(^|[.!?]\s+)([a-z])/g, (_, start, letter) => start + letter.toUpperCase());
+      updated = updated.replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+
+      return updated;
+    }
+
+    function renderResults(issues, mode = 'check') {
+      issueCount.textContent = issues.length;
+      resultsList.innerHTML = '';
+
+      if (!issues.length) {
+        statusBox.className = 'status good';
+        statusBox.textContent = mode === 'fix' ? 'Simple fixes applied. No remaining basic issues were found.' : 'No obvious basic issues were found.';
+        resultsList.innerHTML = '<div class="result-card"><h3>Looks clean</h3><p>Your draft does not show any of the common basic problems this tool checks for. That does not guarantee perfection, but it is a good sign.</p></div>';
+        return;
+      }
+
+      statusBox.className = 'status warn';
+      statusBox.textContent = mode === 'fix'
+        ? `${issues.length} issue${issues.length === 1 ? '' : 's'} still need review after simple fixes.`
+        : `${issues.length} possible issue${issues.length === 1 ? '' : 's'} found.`;
+
+      issues.forEach(issue => {
+        const card = document.createElement('article');
+        card.className = 'result-card';
+        card.innerHTML = `
+          <div class="tag-row"><span class="tag">${escapeHtml(issue.type)}</span></div>
+          <h3>${escapeHtml(issue.title)}</h3>
+          <p class="excerpt">${escapeHtml(issue.excerpt)}</p>
+          <p>${escapeHtml(issue.suggestion)}</p>
+        `;
+        resultsList.appendChild(card);
+      });
+    }
+
+    function runAll(mode = 'check') {
+      const text = essayInput.value;
+      stats(text);
+      renderResults(runChecks(text), mode);
+    }
+
+    checkBtn.addEventListener('click', () => runAll('check'));
+    applyBtn.addEventListener('click', () => {
+      essayInput.value = applySimpleFixes(essayInput.value);
+      runAll('fix');
+      essayInput.focus();
+    });
+    sampleBtn.addEventListener('click', () => { essayInput.value = sampleEssay; runAll('check'); });
+    clearBtn.addEventListener('click', () => { essayInput.value = ''; runAll('check'); essayInput.focus(); });
+    essayInput.addEventListener('input', () => stats(essayInput.value));
+
+    themeToggle.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+    });
+
+    stats(essayInput.value);
+    renderResults(runChecks(essayInput.value), 'check');
+  </script>
+</body>
+</html>
